@@ -1,0 +1,103 @@
+//+------------------------------------------------------------------+
+//|                                                      CCIOBOS.mq5 |
+//|                                  Copyright 2024, MetaQuotes Ltd. |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2024, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+
+#include <Trade\Trade.mqh>
+#include <Trade\PositionInfo.mqh>
+
+int iCCI_handle;
+double iCCI_buff[];
+double Close_buff[];
+string mySymbol;
+ENUM_TIMEFRAMES myTimeframe;
+CTrade m_Trade;
+CPositionInfo m_Position;
+datetime lastCandleTime = 0;
+
+
+int OnInit()
+  {
+   mySymbol=Symbol();
+   myTimeframe=PERIOD_CURRENT;
+   iCCI_handle=iCCI(mySymbol,myTimeframe,50,PRICE_CLOSE);
+   if (iCCI_handle==INVALID_HANDLE)
+      {
+        Print("Failed to get indicator handle");
+        return(-1); 
+      }
+   ChartIndicatorAdd(ChartID(),0, iCCI_handle);
+   ArraySetAsSeries(iCCI_buff,true);
+   ArraySetAsSeries(Close_buff,true);
+   return(0);  
+  }
+  
+ bool isPositionOpenForSymbol(string symbol, ENUM_POSITION_TYPE position_type)
+   {
+    for (int i = 0; i < PositionsTotal(); i++)
+    {
+      if(PositionSelect(mySymbol))
+      {
+         if(PositionGetInteger(POSITION_TYPE) == position_type)
+         {
+            return true;
+         }
+      }
+    }
+    return false;
+    }
+ 
+  
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+   IndicatorRelease(iCCI_handle);
+   ArrayFree(iCCI_buff);
+   ArrayFree(Close_buff);
+  }
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+   datetime currentCandleTime = iTime(mySymbol,myTimeframe,1);
+   if(currentCandleTime != lastCandleTime)
+   {
+      lastCandleTime = currentCandleTime;
+      CopyBuffer(iCCI_handle,0, 0, 4, iCCI_buff);
+      CopyClose(mySymbol,myTimeframe,0,4,Close_buff);
+      
+      if((iCCI_buff[0] > 200) && (Close_buff[0] < Close_buff[1]) && (!isPositionOpenForSymbol(mySymbol,POSITION_TYPE_SELL)))   //Sell Trade
+         {
+           double lot_size = 0.1;
+           double stop_loss_pips = 100*0.01;
+           double take_profit_pips = 100*0.01;
+           double bid_price = SymbolInfoDouble(mySymbol,SYMBOL_BID);
+           double stop_loss = bid_price+stop_loss_pips;
+           double take_profit = bid_price-take_profit_pips;
+           m_Trade.Sell(lot_size,mySymbol,bid_price,stop_loss,take_profit);
+         }
+       
+      if((iCCI_buff[0] < -200) && (Close_buff[0] > Close_buff[1]) && (!isPositionOpenForSymbol(mySymbol,POSITION_TYPE_BUY)))   //Buy Trade
+         {
+           double lot_size = 0.1;
+           double stop_loss_pips = 100*0.01;
+           double take_profit_pips = 100*0.01;
+           double ask_price = SymbolInfoDouble(mySymbol,SYMBOL_ASK);
+           double stop_loss = ask_price-stop_loss_pips;
+           double take_profit = ask_price+take_profit_pips;
+           m_Trade.Buy(lot_size,mySymbol,ask_price,stop_loss,take_profit);
+      }
+   }
+   
+  }
+//+------------------------------------------------------------------+
