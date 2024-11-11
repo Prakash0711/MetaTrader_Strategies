@@ -77,14 +77,14 @@ void OnTick()
    m_Trade.Buy(0.1,my_symbol);  
    }
    
-   if(iMA_buf[1]<Close_buf[1] && iMA_buf[0]>Close_buf[0])  //if the indicator values were less than the closing price and became greater
+   if(iMA_buf[1]<Close_buf[1] && iMA_buf[0]>Close_buf[0]) 
      {
-      if(m_Position.Select(my_symbol))                     //if the position for this symbol already exists
+      if(m_Position.Select(my_symbol))                    
         {
-         if(m_Position.PositionType()==POSITION_TYPE_BUY) m_Trade.PositionClose(my_symbol);   //and this is a Buy position, then close it
-         if(m_Position.PositionType()==POSITION_TYPE_SELL) return;                             //or else, if this is a Sell position, then exit
+         if(m_Position.PositionType()==POSITION_TYPE_BUY) m_Trade.PositionClose(my_symbol);   
+         if(m_Position.PositionType()==POSITION_TYPE_SELL) return;                             
         }
-      m_Trade.Sell(0.1,my_symbol);                         //if we got here, it means there is no position; then we open it
+      m_Trade.Sell(0.1,my_symbol);                        
      }
   }
 //+------------------------------------------------------------------+
